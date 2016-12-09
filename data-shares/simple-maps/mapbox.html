@@ -1,115 +1,47 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Fulcrum Data Shares</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.css">
-    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" />
-    <script src="https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.js"></script>
-    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.28.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.28.0/mapbox-gl.css' rel='stylesheet' />
     <style>
-      body {
-        padding: 0;
-        margin: 0;
-      }
-      html, body, #map {
-        height: 100%;
-      }
-      .leaflet-container img.leaflet-marker-icon {
-        clip: rect(auto auto 40px auto);
-      }
-      .legend-img {
-        vertical-align: middle;
-        margin-right: 5px;
-        height: 20px;
-        width: 15px;
-      }
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
     </style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <script>
-      L.mapbox.accessToken = "pk.eyJ1IjoiYnJ5bWNicmlkZSIsImEiOiJIYjFYYXlFIn0.Ci5eKfdnPfKDunIWHPUkXQ";
+</head>
+<body>
 
-      var config = {
-        share_id: "b711f907a8d42665",  // Edit this
-        popup_properties: ["Description", "Is camera present?", "Model of camera", "Coverage photos", "Platform type", "Platform height", "Platform photos"]  // Optional - An array of properties to show in a Leaflet popup
-      };
+<div id='map'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGdsdWkiLCJhIjoiY2lsOXBlMjMwMG1tanZqbTJtZnhzcDdtaCJ9.5hLtHWSdZvm5Xsb6Xdoruw';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v9',
+    center: [46.632482,24.645014],
+    zoom: 12
+});
 
-      var legendItems = {};
+map.on('load', function () {
+  map.addSource("points", {
+    "type": "geojson",
+    "data": 'https://web.fulcrumapp.com/shares/b233a3fa8ecd0a33.geojson'
+  });
 
-      function photoGallery(photos) {
-        var photoArray = [];
-        $.each(photos.split(","), function(index, photo) {
-          photoArray.push({href: "https://web.fulcrumapp.com/shares/" + config.share_id + "/photos/" + photo});
-        });
-        $.fancybox(photoArray, {
-          "type": "image",
-          "showNavArrows": true,
-          "padding": 0,
-          "scrolling": "no",
-          beforeShow: function () {
-            this.title = "Photo " + (this.index + 1) + " of " + this.group.length + (this.title ? " - " + this.title : "");
-          },
-          helpers: {
-            overlay: {
-              css: {
-                "overflow": "hidden"
-              }
-            }
-          }
-        });
-        return false;
+  map.addLayer({
+    "id": "points",
+    "type": "symbol",
+    "source": "points",
+    "layout": {
+      "icon-image": "marker-15",
+      "text-field": "{tree_no}",
+      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+      "text-offset": [0, 0.9],
+      "text-anchor": "center"
       }
-
-      var map = L.mapbox.map("map", "brymcbride.map-n136kgxs")
-        .setView([-82.45580, 27.94857], 15);
-
-      var featureLayer = L.mapbox.featureLayer()
-        .loadURL("https://web.fulcrumapp.com/shares/"+config.share_id+".geojson?human_friendly=true")
-        .addTo(map)
-        .on("ready", function() {
-          map.fitBounds(featureLayer.getBounds());
-          featureLayer.eachLayer(function(layer) {
-            layer._icon.title = layer.feature.properties["Description"];
-            var props = layer.feature.properties;
-            var attributes = [];
-            $.each(config.popup_properties, function(index, prop) {
-              if (prop in props) {
-                /* Handle photos */
-                if (prop === "Coverage photos" || prop === "Platform photos") {
-                  if (props[prop]) {
-                    props[prop] = "<a href='#' onclick='photoGallery(\"" + props[prop] + "\"); return false;'>View Photos</a>";
-                  }
-                }
-                /* Handle potential "other" values */
-                if (prop === "Model of camera") {
-                  if (props[prop] === null) {
-                    props[prop] = props["Model of camera Other"];
-                  }
-                }
-                if (prop === "Platform type") {
-                  if (props[prop] === null) {
-                    props[prop] = props["Platform type Other"];
-                  }
-                }
-                attributes.push("<strong>" + prop + "</strong>: " + props[prop]);
-              }
-            });
-            if (layer.feature.properties["marker-color"]) {
-              legendItems[layer.feature.properties.Status] = layer.feature.properties["marker-color"];
-            }
-            layer.bindPopup(attributes.join("<br>"));
-          });
-          map.legendControl.addLegend("<div id='legend'></div>");
-          $.each(legendItems, function(index, value) {
-            $("#legend").append("<div><img class='legend-img' src='http://fulcrumapp.github.io/share-maps/assets/img/markers/" + value.replace("#",'').toLowerCase() + ".png'>" + index + "</div>");
-          });
-        });
-      
-
-    </script>
-  </body>
+    });
+});
+</script>
+</body>
 </html>
